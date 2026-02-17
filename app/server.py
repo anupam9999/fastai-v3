@@ -1,5 +1,6 @@
 import aiohttp
 import asyncio
+import sys
 import uvicorn
 from fastai import *
 from fastai.vision import *
@@ -17,7 +18,7 @@ path = Path(__file__).parent
 
 app = Starlette()
 app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_headers=['X-Requested-With', 'Content-Type'])
-app.mount('/static', StaticFiles(directory='app/static'))
+app.mount('/static', StaticFiles(directory=str(path / 'static')))
 
 
 async def download_file(url, dest):
@@ -43,10 +44,9 @@ async def setup_learner():
             raise
 
 
-loop = asyncio.get_event_loop()
-tasks = [asyncio.ensure_future(setup_learner())]
-learn = loop.run_until_complete(asyncio.gather(*tasks))[0]
-loop.close()
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+learn = loop.run_until_complete(setup_learner())
 
 
 @app.route('/')
@@ -66,4 +66,4 @@ async def analyze(request):
 
 if __name__ == '__main__':
     if 'serve' in sys.argv:
-        uvicorn.run(app=app, host='0.0.0.0', port=5000, log_level="info")
+        uvicorn.run(app=app, host='0.0.0.0', port=5000, log_level="info", loop="asyncio")
